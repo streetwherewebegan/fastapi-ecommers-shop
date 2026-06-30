@@ -32,7 +32,7 @@ async def create_category(category: CategoryCreate, db: Session = Depends(get_db
                                            CategoryModel.is_active == True)
         parent = db.scalars(stmt).first()
         if parent is None:
-            raise HTTPException(status_code=404, detail='Parent category not found')
+            raise HTTPException(status_code=400, detail='Parent category not found')
         
     db_category = CategoryModel(**category.model_dump())
     db.add(db_category)
@@ -41,12 +41,34 @@ async def create_category(category: CategoryCreate, db: Session = Depends(get_db
     return db_category
 
 
-@router.put('/{category_id}')
-async def update_category(category_id: int):
+@router.put('/{category_id}', response_model=CategorySchema)
+async def update_category(category_id: int, category: CategoryCreate, db: Session = Depends(get_db)):
     '''
     Обновляет категорию по её ID
     '''
-    return {"message": '#'}
+    stmt = select(CategoryModel).where(CategoryModel.id == category_id, 
+                                       CategoryModel.is_active == True)
+    db_category = db.scalars(stmt).first()
+    if db_category is None:
+        raise HTTPException(status_code=404, detail='Category not found')
+    
+    if category.parent_id is not None:
+        parent_stmt = select(CategoryModel).where(CategoryModel.id == category.parent_id,
+                                                  CategoryModel.is_active == True)
+        parent = db.scalars(parent_stmt).first()
+        if parent is None:
+            raise HTTPException(status_code=400, detail='Parent category not found')
+        
+
+    db.execute(
+        update(CategoryModel)
+        .where(CategoryModel.id == category_id)
+        .values(**category.model_dump())
+    )
+    db.commit()
+    db.refresh(db_category)
+    return db_category
+
 
 # выполняет логическое удаление категории, устанавливая is_active=False, чтобы она не отображалась в списке активных категорий
 @router.delete('/{category_id}', status_code=status.HTTP_200_OK)
@@ -62,10 +84,6 @@ async def delete_category(category_id: int, db: Session = Depends(get_db)):
     db.execute(update(CategoryModel).where(CategoryModel.id == category_id).values(is_active = False))
     # update(CategoryModel): обновляется таблица, соответствующая модели CategoryModel;
     # .values(is_active=False): Устанавливает поле is_active в значение False
-
-
-
-
 
     db.commit()
 
