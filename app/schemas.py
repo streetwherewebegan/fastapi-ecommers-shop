@@ -23,7 +23,7 @@ class Category(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class ProuctCreate(BaseModel):
+class ProductCreate(BaseModel):
     """
     Модель для создания и обновления товара.
     Используется в POST и PUT запросах.

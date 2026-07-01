@@ -41,7 +41,7 @@ async def create_category(category: CategoryCreate, db: Session = Depends(get_db
     return db_category
 
 
-@router.put('/{category_id}', response_model=CategorySchema)
+@router.put('/{category_id}', response_model=CategorySchema, status_code=status.HTTP_200_OK)
 async def update_category(category_id: int, category: CategoryCreate, db: Session = Depends(get_db)):
     '''
     Обновляет категорию по её ID
@@ -81,7 +81,11 @@ async def delete_category(category_id: int, db: Session = Depends(get_db)):
     if category is None:
         raise HTTPException(status_code=404, detail='Category not found')
     
-    db.execute(update(CategoryModel).where(CategoryModel.id == category_id).values(is_active = False))
+    db.execute(
+        update(CategoryModel)
+        .where(CategoryModel.id == category_id)
+        .values(is_active = False)
+        )
     # update(CategoryModel): обновляется таблица, соответствующая модели CategoryModel;
     # .values(is_active=False): Устанавливает поле is_active в значение False
 
