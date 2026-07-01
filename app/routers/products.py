@@ -30,7 +30,8 @@ async def crete_product(product: ProductCreate, db: Session = Depends(get_db)):
     """
     Создаёт новый товар.
     """
-    stmt = select(CategoryModel).where(CategoryModel.id == product.category_id)
+    stmt = select(CategoryModel).where(CategoryModel.id == product.category_id,
+                                       CategoryModel.is_active == True)
     category = db.scalars(stmt).first()
     if category is None:
         raise HTTPException(status_code=400, detail='Category not found or inactive')
