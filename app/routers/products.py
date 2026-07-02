@@ -21,8 +21,16 @@ async def get_all_products(db: Session = Depends(get_db)):
     """
     Возвращает список всех товаров.
     """
-    stmt = select(ProductModel).where(ProductModel.is_active == True)
-    products = db.scalars(stmt).all()
+    # stmt = select(ProductModel).where(ProductModel.is_active == True)
+    # products = db.scalars(stmt).all()
+
+    # проверка в запросе на "удаленную" категорию
+    products = db.scalars(select(ProductModel).join(CategoryModel)
+                          .where(ProductModel.is_active == True,
+                                 CategoryModel.is_active == True,
+                                 ProductModel.stock > 0)).all()
+
+
     return products
 
 @router.post('/', response_model=ProductSchema, status_code=status.HTTP_201_CREATED)
@@ -106,16 +114,18 @@ async def delete_product_by_id(product_id: int, db: Session = Depends(get_db)):
     """
     Удаляет товар логически по его ID.
     """
-    stmt = select(ProductModel).where(ProductModel.id == product_id)
+    stmt = select(ProductModel).where(ProductModel.id == product_id, ProductModel.is_active == True)
     product = db.scalars(stmt).first()
     if product is None:
         raise HTTPException(status_code=404, detail='Product not found or inactive')
     
-    db.execute(
-        update(ProductModel)
-        .where(ProductModel.id == product_id)
-        .values(is_active=False)
-    )
+    # db.execute(
+    #     update(ProductModel)
+    #     .where(ProductModel.id == product_id)
+    #     .values(is_active=False)
+    # )
+
+    product.is_active = False
     db.commit()
 
     return {'status': 'success', 'message': 'Product marked as inactive'}
