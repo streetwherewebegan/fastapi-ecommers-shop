@@ -37,9 +37,10 @@ async def create_product(product: ProductCreate, db: AsyncSession = Depends(get_
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail='Category not found or inactive')
 
-    db_product = ProductModel(**product.model_dump(exclude_unset=True))
+    db_product = ProductModel(**product.model_dump())
     db.add(db_product)
     await db.commit()
+    await db.refresh(db_product)
     return db_product
 
 @router.get('/category/{category_id}', response_model=list[ProductSchema])
@@ -107,6 +108,7 @@ async def update_product(product_id: int, product: ProductCreate, db: AsyncSessi
         .values(**updated_product)
     )
     await db.commit()
+    await db.refresh(db_product)
     return db_product
 
 @router.delete('/{product_id}', status_code=status.HTTP_200_OK)
