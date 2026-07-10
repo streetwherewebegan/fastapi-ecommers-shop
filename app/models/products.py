@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .categories import Category
-    from .user import User
+    from .users import User
 
 
 
