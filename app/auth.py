@@ -26,7 +26,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
     return pwd_context.verify(plain_password, hashed_password)
 
-def create_acess_token(data: dict):
+def create_acess_token(data: dict) -> str:
     """
     Создаёт JWT с payload (sub, role, id, exp).
     """
@@ -36,7 +36,7 @@ def create_acess_token(data: dict):
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 async def get_current_user(token: str = Depends(oauth2_scheme), 
-                           db: AsyncSession = Depends(get_async_db)):
+                           db: AsyncSession = Depends(get_async_db)) -> UserModel:
     """
     Проверяет JWT и возвращает пользователя из базы.
     """
@@ -67,3 +67,20 @@ async def get_current_user(token: str = Depends(oauth2_scheme),
     if user is None:
         raise credintials_exception
     return user
+
+async def get_current_seller(current_user: UserModel = Depends(get_current_user)) -> UserModel:
+    """
+    Проверяет, что пользователь имеет роль 'seller'.
+    """
+    if current_user.role != 'seller':
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, 
+                            detail='Only sellers can perform this action')
+    
+    return current_user
+
+async def is_admin(current_user: UserModel = Depends(get_current_user)):
+    if current_user.role != 'admin':
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, 
+                            detail='Only admin can perform this action')
+    return current_user
+    
