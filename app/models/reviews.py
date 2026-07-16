@@ -1,3 +1,5 @@
+from datetime import datetime
+from typing import TYPE_CHECKING
 from sqlalchemy import (
     Integer, 
     Text, 
@@ -7,9 +9,12 @@ from sqlalchemy import (
     CheckConstraint, 
     func
 )
-from sqlalchemy.orm import Mapped, mapped_column
-from datetime import datetime
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
+
+
+if TYPE_CHECKING:
+    from .users import User
 
 
 class Review(Base):
@@ -30,8 +35,10 @@ class Review(Base):
         DateTime(timezone=True), 
         server_default=func.now()
     )
-    grade: Mapped[int] = mapped_column(
-        Integer,
-        nullable=False
-    )
+    grade: Mapped[int] = mapped_column(Integer, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    user: Mapped['User'] = relationship(
+        'User',
+        back_populates='reviews'
+    )

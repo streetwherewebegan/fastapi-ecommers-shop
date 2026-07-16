@@ -115,9 +115,6 @@ async def access_token(
         }
 
 
-
-
-
 @router.post('/refresh-token')
 async def refresh_token(
     body: RefreshTokenRequest,

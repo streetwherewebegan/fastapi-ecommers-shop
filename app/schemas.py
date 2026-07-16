@@ -46,10 +46,11 @@ class Product(BaseModel):
     id: int = Field(..., description='Уникальный идентификатор товара')
     name: str = Field(..., description='Название товара')
     description: str | None = Field(None, description='Описание товара')
-    price: Decimal = Field(..., ge=0, decimal_places=2, description='Цена товара в рублях')
+    price: Decimal = Field(..., ge=0, decimal_places=2, examples=[999.99], description='Цена товара в рублях')
     image_url: str | None = Field(None, description='URL изображения товара')
     stock: int = Field(..., description='Количество товара на складе')
     category_id: int = Field(..., description='ID категории')
+    rating: float = Field(..., description='Рейтинг товара')
     is_active: bool = Field(..., description='Активность товара')
 
     model_config = ConfigDict(from_attributes=True)
@@ -95,7 +96,6 @@ class ReviewCreate(BaseModel):
     product_id: int = Field(..., description='ID товара')
     comment: str | None = Field(None, description='Текст отзыва')
     grade: int = Field(..., ge=1, le=5, description='Оценка')
-
 
 class Review(BaseModel):
     id: int = Field(..., description='Уникальный идентификатор отзыва')

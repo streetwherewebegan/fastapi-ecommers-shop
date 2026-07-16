@@ -1,17 +1,25 @@
 from decimal import Decimal
-
-from sqlalchemy import String, Boolean, Integer, Numeric, ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-
+from typing import TYPE_CHECKING
+from sqlalchemy import (
+    String, 
+    Boolean, 
+    Integer, 
+    Numeric, 
+    ForeignKey, 
+    Float, 
+    text
+)
+from sqlalchemy.orm import (
+    Mapped, 
+    mapped_column, 
+    relationship
+)
 from app.database import Base
 
-
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .categories import Category
     from .users import User
-
 
 
 class Product(Base):
@@ -24,9 +32,13 @@ class Product(Base):
     image_url: Mapped[str | None] = mapped_column(String(200), nullable=True)
     stock: Mapped[int] = mapped_column(Integer, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    category_id: Mapped[int] = mapped_column(Integer, ForeignKey('categories.id'), nullable=False)
+    category_id: Mapped[int] = mapped_column(
+        Integer, 
+        ForeignKey('categories.id'), 
+        nullable=False
+    )
     seller_id: Mapped[int] = mapped_column(Integer, ForeignKey('users.id'), nullable=False)
-
+    rating: Mapped[float] = mapped_column(Float, default=0.0, server_default=text('0'))
 
     category: Mapped['Category'] = relationship(
         'Category',
@@ -36,5 +48,3 @@ class Product(Base):
         'User',
         back_populates='products'
     )
-
-

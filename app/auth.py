@@ -91,9 +91,9 @@ async def get_current_seller(current_user: UserModel = Depends(get_current_user)
     """
     Проверяет, что пользователь имеет роль 'seller'.
     """
-    if current_user.role != 'seller':
+    if current_user.role not in ('seller', 'admin'):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, 
-                            detail='Only sellers can perform this action')
+                            detail='Only sellers or admin can perform this action')
     
     return current_user
 
