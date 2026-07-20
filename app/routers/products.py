@@ -1,3 +1,4 @@
+from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy import select, update, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,20 +25,51 @@ router = APIRouter(
 async def get_all_products(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
+    category_id: int | None = Query(None, description='ID категории для фильтрации'),
+    min_price: int | None = Query(None, ge=0, description='Минимальная цена товара'),
+    max_price: int | None = Query(None, ge=0,description='Максимальная цена товара'),
+    in_stock: bool | None = Query(
+        None, description='true — только товары в наличии, false — только без остатка'),
+    seller_id: int | None = Query(None, description='ID продавца для фильтрации'),
+    sort_by: Literal['id', 'created_at'] = Query(
+        'id', description='Cортировка даты'),
+    order: Literal['asc', 'desc'] = Query('desc', description='Направление сортировки'),
     db: AsyncSession = Depends(get_async_db)
-    ):
+):
     '''
-    Возвращает список всех активных товаров
+    Возвращает список всех активных товаров с поддержкой фильтров.
     '''
-    total_stmt = select(func.count()).select_from(ProductModel).where(
-        ProductModel.is_active == True
-    )
+    if min_price is not None and max_price is not None and min_price > max_price:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='min_price не может быть больше max_price'
+        )
+    
+    filters = [ProductModel.is_active == True]
+
+    if category_id is not None:
+        filters.append(ProductModel.category_id == category_id)
+    if min_price is not None:
+        filters.append(ProductModel.price >= min_price)
+    if max_price is not None:
+        filters.append(ProductModel.price <= max_price)
+    if in_stock is not None:
+        filters.append(ProductModel.stock > 0 if in_stock else ProductModel.stock == 0)
+    if seller_id is not None:
+        filters.append(ProductModel.seller_id == seller_id)
+
+    total_stmt = select(func.count()).select_from(ProductModel).where(*filters)
     total = await db.scalar(total_stmt) or 0
+
+    sorting_parameters = (ProductModel.id if sort_by == 'id' else ProductModel.created_at)
+
+    if order == 'desc':
+        sorting_parameters = sorting_parameters.desc()
 
     products_stmt = (
         select(ProductModel)
-        .where(ProductModel.is_active == True)
-        .order_by(ProductModel.id)
+        .where(*filters)
+        .order_by(sorting_parameters)
         .offset((page - 1) * page_size)
         .limit(page_size)
     )
@@ -50,15 +82,6 @@ async def get_all_products(
         'page_size': page_size
     }
 
-    # result = await db.scalars(select(ProductModel)
-    #                           .join(CategoryModel)
-    #                           .where(
-    #                               ProductModel.is_active == True,
-    #                               CategoryModel.is_active == True,
-    #                               ProductModel.stock > 0
-    #                            ))
-    # db_products = result.all()
-    # return db_products
 
 @router.post('/', response_model=ProductSchema, status_code=status.HTTP_201_CREATED)
 async def create_product(

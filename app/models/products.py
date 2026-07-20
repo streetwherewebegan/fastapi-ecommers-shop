@@ -1,13 +1,15 @@
 from decimal import Decimal
 from typing import TYPE_CHECKING
 from sqlalchemy import (
-    String, 
-    Boolean, 
-    Integer, 
-    Numeric, 
-    ForeignKey, 
-    Float, 
-    text
+    String,
+    Boolean,
+    Integer,
+    DateTime,
+    Numeric,
+    ForeignKey,
+    Float,
+    text,
+    func,
 )
 from sqlalchemy.orm import (
     Mapped, 
@@ -39,6 +41,17 @@ class Product(Base):
     )
     seller_id: Mapped[int] = mapped_column(Integer, ForeignKey('users.id'), nullable=False)
     rating: Mapped[float] = mapped_column(Float, default=0.0, server_default=text('0'))
+    created_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), 
+        server_default=func.now(), 
+        nullable=False
+    )
+    updated_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), 
+        server_default=func.now(), 
+        onupdate=func.now(), 
+        nullable=False
+    )
 
     category: Mapped['Category'] = relationship(
         'Category',
