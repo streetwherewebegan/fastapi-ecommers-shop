@@ -25,10 +25,15 @@ from app.database import Base
 if TYPE_CHECKING:
     from .categories import Category
     from .users import User
+    from .cart_items import CartItem
 
 
 class Product(Base):
     __tablename__ = "products"
+
+    __table_args__ = (
+        Index('ix_products_tsv_gin', 'tsv', postgresql_using='gin'),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -77,7 +82,10 @@ class Product(Base):
         'User',
         back_populates='products'
     )
-
-    __table_args__ = (
-        Index('ix_products_tsv_gin', 'tsv', postgresql_using='gin'),
+    cart_items: Mapped[list['CartItem']] = relationship(
+        'CartItem',
+        back_populates='product',
+        cascade='all, delete-orphan'
     )
+
+    

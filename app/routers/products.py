@@ -91,25 +91,7 @@ async def get_all_products(
             .offset((page - 1) * page_size)
             .limit(page_size)
         )
-
-        #============== здесь продолжить============
-
-
-
-    #=================посмотреть код внизу===============
-    sorting_parameters = (ProductModel.id if sort_by == 'id' else ProductModel.created_at)
-
-    if order == 'desc':
-        sorting_parameters = sorting_parameters.desc()
-
-    products_stmt = (
-        select(ProductModel)
-        .where(*filters)
-        .order_by(sorting_parameters)
-        .offset((page - 1) * page_size)
-        .limit(page_size)
-    )
-    items = (await db.scalars(products_stmt)).all()
+        items = (await db.scalars(products_stmt)).all()
 
     return {
         'items': items,
