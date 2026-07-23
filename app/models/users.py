@@ -7,6 +7,7 @@ from app.database import Base
 if TYPE_CHECKING:
     from .products import Product
     from .reviews import Review
+    from .cart_items import CartItem
 
 
 class User(Base):
@@ -26,4 +27,10 @@ class User(Base):
     reviews: Mapped[list['Review']] =  relationship(
         'Review',
         back_populates='user'
+    )
+
+    cart_items: Mapped[list['CartItem']] = relationship(
+        'CartItem',
+        back_populates='user',
+        cascade='all, delete-orphan'
     )
