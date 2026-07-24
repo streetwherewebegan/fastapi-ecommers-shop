@@ -26,6 +26,7 @@ if TYPE_CHECKING:
     from .categories import Category
     from .users import User
     from .cart_items import CartItem
+    from .orders import OrderItem
 
 
 class Product(Base):
@@ -88,4 +89,7 @@ class Product(Base):
         cascade='all, delete-orphan'
     )
 
-    
+    order_items: Mapped[list['OrderItem']] = relationship(
+        'OrderItem',
+        back_populates='product'
+    )
