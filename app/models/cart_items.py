@@ -46,7 +46,6 @@ class CartItem(Base):
         'User',
         back_populates='cart_items'
     )
-
     product: Mapped['Product'] = relationship(
         'Product',
         back_populates='cart_items'
