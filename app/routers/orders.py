@@ -122,10 +122,7 @@ async def list_orders(
     orders = result.all()
 
 
-    orders_schema = [
-        OrderSchema.model_validate(item)
-        for item in orders
-    ]
+    orders_schema = [OrderSchema.model_validate(item) for item in orders]
 
 
     return OrderListSchema(
@@ -136,6 +133,23 @@ async def list_orders(
     )
 
 
+
+@router.get('/{order_id}', response_model=OrderSchema)
+async def get_order(
+    order_id: int,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: UserModel = Depends(get_current_user),
+):
+    '''
+    Возвращает детальную информацию по заказу, если он принадлежит пользователю.
+    '''
+    order = await _load_order_with_items(db, order_id)
+    if not order or order.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail='Order not found'
+        )
+    return order
 
 
 

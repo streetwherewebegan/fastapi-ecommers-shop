@@ -1,7 +1,9 @@
 from typing import Literal
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, UploadFile, File, Form, Depends, Query, HTTPException, status
+from pathlib import Path
 from sqlalchemy import select, update, func, desc
 from sqlalchemy.ext.asyncio import AsyncSession
+import uuid
 from app.auth import get_current_seller
 from app.db_depends import get_async_db
 from app.models.categories import Category as CategoryModel
@@ -20,6 +22,48 @@ router = APIRouter(
     prefix='/products',
     tags=['products']
 )
+
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+MEDIA_ROOT = BASE_DIR / 'media' / 'products'
+MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
+ALLOWED_IMAGE_TYPES = {'image/jpeg', 'image/png', 'image/webp'}
+MAX_IMAGE_SIZE = 2 * 1024 * 1024
+
+async def save_product_image(file: UploadFile) -> str:
+    '''
+    Сохраняет изображение товара и возвращает относительный URL.
+    '''
+    if file.content_type not in ALLOWED_IMAGE_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Only JPG, PNG or WebP images are allowed'
+        )
+    content = await file.read()
+    if len(content) > MAX_IMAGE_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Image is too large'
+        )
+
+    extension = Path(file.filename or '').suffix.lower() or '.jpg'
+    file_name = f'{uuid.uuid4()}{extension}'
+    file_path = MEDIA_ROOT / file_name
+    file_path.write_bytes(content)
+    return '/media/products/{file_name}'
+
+async def remove_product_image(url: str | None) -> None:
+    '''
+    Удаляет файл изображения, если он существует.
+    '''
+    if not url:
+        return
+    relaive_path = url.lstrip('/')
+    file_path = BASE_DIR / relaive_path
+    if file_path.exists():
+        file_path.unlink()
+
+
+
 
 @router.get('/', response_model=ProductList)
 async def get_all_products(
@@ -99,7 +143,6 @@ async def get_all_products(
         'page': page,
         'page_size': page_size
     }
-
 
 @router.post('/', response_model=ProductSchema, status_code=status.HTTP_201_CREATED)
 async def create_product(

@@ -183,7 +183,7 @@ class OrderItem(BaseModel):
 class Order(BaseModel):
     id: int = Field(..., description='ID заказа')
     user_id: int = Field(..., description='ID пользователя')
-    status: int = Field(..., description='Текущий статус заказа')
+    status: str = Field(..., description='Текущий статус заказа')
     total_amount: int = Field(..., ge=0, description='Общая стоимость')
     created_at: datetime = Field(..., description='Когда заказ был создан')
     updated_at: datetime = Field(..., description='Когда последний раз обновлялся')
