@@ -49,9 +49,9 @@ async def save_product_image(file: UploadFile) -> str:
     file_name = f'{uuid.uuid4()}{extension}'
     file_path = MEDIA_ROOT / file_name
     file_path.write_bytes(content)
-    return '/media/products/{file_name}'
+    return f'/media/products/{file_name}'
 
-async def remove_product_image(url: str | None) -> None:
+def remove_product_image(url: str | None) -> None:
     '''
     Удаляет файл изображения, если он существует.
     '''
@@ -61,8 +61,6 @@ async def remove_product_image(url: str | None) -> None:
     file_path = BASE_DIR / relaive_path
     if file_path.exists():
         file_path.unlink()
-
-
 
 
 @router.get('/', response_model=ProductList)
@@ -146,17 +144,20 @@ async def get_all_products(
 
 @router.post('/', response_model=ProductSchema, status_code=status.HTTP_201_CREATED)
 async def create_product(
-    product: ProductCreate,
+    product: ProductCreate = Depends(ProductCreate.as_form),
+    image: UploadFile | None = File(None),
     db: AsyncSession = Depends(get_async_db),
     current_user: UserModel = Depends(get_current_seller)
     ):
     '''
     Создаёт новый товар, привязанный к текущему продавцу
     '''
-    category_result = await db.scalars(select(CategoryModel).where(
-        CategoryModel.id == product.category_id,
-        CategoryModel.is_active == True
-    ))
+    category_result = await db.scalars(
+        select(CategoryModel).where(
+            CategoryModel.id == product.category_id,
+            CategoryModel.is_active == True
+        )
+    )
 
     if not category_result.first():
         raise HTTPException(
@@ -164,7 +165,15 @@ async def create_product(
             detail='Category not found or inactive'
         )
 
-    db_product = ProductModel(**product.model_dump(), seller_id = current_user.id)
+    image_url = await save_product_image(image) if image else None
+
+    
+
+    db_product = ProductModel(
+        **product.model_dump(), 
+        seller_id = current_user.id,
+        image_url=image_url,
+    )
 
     db.add(db_product)
     await db.commit()
@@ -252,16 +261,19 @@ async def get_product_reviews(product_id: int, db: AsyncSession = Depends(get_as
 @router.put('/{product_id}', response_model=ProductSchema)
 async def update_product(
     product_id: int,
-    product: ProductCreate,
+    product: ProductCreate = Depends(ProductCreate.as_form),
+    image: UploadFile | None = File(None),
     db: AsyncSession = Depends(get_async_db),
     current_user: UserModel = Depends(get_current_seller)):
     '''
     Обновляет товар по его ID
     '''
-    result = await db.scalars(select(ProductModel).where(
-        ProductModel.id == product_id,
-        ProductModel.is_active == True
-    ))
+    result = await db.scalars(
+        select(ProductModel).where(
+            ProductModel.id == product_id,
+            ProductModel.is_active == True
+        )
+    )
     db_product = result.first()
 
     if not db_product:
@@ -276,10 +288,12 @@ async def update_product(
             detail='You can only update your own products'
         )
 
-    category_result = await db.scalars(select(CategoryModel).where(
-        CategoryModel.id == product.category_id,
-        CategoryModel.is_active == True
-    ))
+    category_result = await db.scalars(
+        select(CategoryModel).where(
+            CategoryModel.id == product.category_id,
+            CategoryModel.is_active == True
+        )
+    )
 
     if not category_result.first():
         raise HTTPException(
@@ -294,6 +308,10 @@ async def update_product(
         .where(ProductModel.id == product_id)
         .values(**updated_product)
     )
+    if image:
+        remove_product_image(db_product.image_url)
+        db_product.image_url = await save_product_image(image)
+
     await db.commit()
     await db.refresh(db_product)
     return db_product
@@ -324,10 +342,13 @@ async def delete_product(
             detail='You can only delete your own products'
         )
 
+    remove_product_image(db_product.image_url)
+
     await db.execute(
         update(ProductModel)
         .where(ProductModel.id == product_id)
-        .values(is_active=False)
+        .values(image_url=None, is_active=False)
     )
     await db.commit()
+    await db.refresh(db_product)
     return db_product
